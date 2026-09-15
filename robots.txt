@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://navalkumawat.github.io/sitemap.xml
