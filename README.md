@@ -29,38 +29,78 @@ Open Graph + Twitter cards, and Schema.org `Person` structured data.
 
 ## Publishing to GitHub Pages
 
-The repo is already initialised locally with a first commit. To go live:
+The repo is initialised locally with `origin` already pointing at
+`https://github.com/navalkumawat/navalkumawat.github.io.git`.
 
-**1. Create the repo on GitHub**
+### Step 1 — rename the GitHub account to `navalkumawat`
 
-Go to https://github.com/new and create a repository named exactly:
+A user site only serves from the root domain when the repo is named
+`<username>.github.io`, so the account name has to match.
 
+github.com → avatar → **Settings** → **Account** → *Change username* → `navalkumawat`
+
+GitHub redirects the old `naval240221` repo URLs and git operations, so nothing
+breaks immediately. Update other clones when convenient:
+
+```bash
+git -C ~/workspace/divyanav remote set-url origin git@github.com:navalkumawat/divyanav.git
 ```
-navalkumawat.github.io
-```
 
-Make it **Public**. Do **not** add a README, .gitignore or licence — this repo already has them.
+> Renaming frees `naval240221` for anyone else to claim. That only matters if an
+> old link to it is published somewhere you do not control.
 
-**2. Push from this folder**
+### Step 2 — create the repository
+
+https://github.com/new
+
+- Owner: **navalkumawat**
+- Repository name: **`navalkumawat.github.io`** (must match exactly)
+- Visibility: **Public** — a free account cannot serve Pages from a private user site
+- Do **not** tick *Add a README*, *.gitignore* or *licence* — this repo already has them
+
+### Step 3 — create a personal access token
+
+None of the SSH keys on this machine authenticate to GitHub, so push over HTTPS.
+
+https://github.com/settings/tokens → **Generate new token (classic)**
+
+- Note: `portfolio push`
+- Expiration: your call — 90 days is a reasonable default
+- Scope: tick **`repo`** only
+
+Copy the token now; GitHub shows it once.
+
+### Step 4 — push
 
 ```bash
 cd ~/workspace/navalkumawat.github.io
-git remote add origin https://github.com/navalkumawat/navalkumawat.github.io.git
 git push -u origin main
 ```
 
-**3. Turn on Pages**
+When prompted:
 
-Repo → **Settings** → **Pages** → under *Build and deployment*:
+- **Username:** `navalkumawat`
+- **Password:** paste the **token** (not your GitHub password)
+
+macOS keychain stores it, so later pushes need no credentials.
+
+### Step 5 — turn on Pages
+
+Repo → **Settings** → **Pages** → *Build and deployment*:
 
 - Source: **Deploy from a branch**
 - Branch: **main**, folder: **/ (root)** → **Save**
 
-The site is live at **https://navalkumawat.github.io** within a minute or two.
-Because the repo is named `<username>.github.io`, it serves from the root domain —
-no project-path prefix to worry about.
+Live at **https://navalkumawat.github.io** in a minute or two. The *Actions* tab
+shows the deploy running if you want to watch it.
 
-> A `<username>.github.io` repo must be **public** for Pages to work on a free account.
+### Verifying
+
+```bash
+curl -sI https://navalkumawat.github.io | head -1          # expect HTTP/2 200
+```
+
+If you get a 404, give it another minute — the first deploy is the slow one.
 
 ---
 
