@@ -624,6 +624,10 @@ html[data-theme='light'] .ico-moon { display: none; }
 
   .menu-btn { display: flex; }
 
+  /* .nav-links leaves the flow below this width, taking its margin-left:auto
+     with it — without this the actions clump against the brand. */
+  .nav-actions { margin-left: auto; }
+
   .nav-links {
     position: absolute; top: calc(100% + 1px); left: 0; right: 0;
     flex-direction: column; align-items: stretch; gap: 2px;
@@ -674,3 +678,219 @@ html[data-theme='light'] .ico-moon { display: none; }
   .section { padding: 24px 0; break-inside: avoid; }
   .grad, .stat-num { -webkit-text-fill-color: #000; color: #000; background: none; }
 }
+
+/* ═══════════════════════════════════════════════════════
+   ARTICLE / CASE STUDY  (writing/*.html)
+   ═══════════════════════════════════════════════════════ */
+
+.art-head { padding: clamp(104px, 14vw, 150px) 0 clamp(30px, 5vw, 46px); }
+.art-back {
+  display: flex; width: fit-content; align-items: center; gap: 8px;
+  color: var(--text-dim); font-family: var(--mono); font-size: 12.5px;
+  margin-bottom: 26px; transition: color .2s, gap .2s var(--ease);
+}
+.art-back:hover { color: var(--accent); gap: 12px; }
+.art-back svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.art-title {
+  font-size: clamp(2rem, 5.6vw, 3.4rem);
+  font-weight: 800; letter-spacing: -.035em;
+  max-width: 19ch; margin: 0 0 20px;
+}
+.art-dek {
+  font-size: clamp(1.02rem, 2.1vw, 1.22rem);
+  color: var(--text-soft); max-width: 60ch; margin: 0 0 30px;
+}
+.art-meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
+  font-family: var(--mono); font-size: 12px; color: var(--text-dim);
+  padding-top: 22px; border-top: 1px solid var(--border);
+}
+.art-meta .sep { padding: 0; }
+
+/* ─── layout: prose + sticky contents rail ─── */
+
+.art-body { padding-bottom: clamp(60px, 9vw, 104px); }
+.art-grid {
+  display: grid; grid-template-columns: 1fr;
+  gap: clamp(36px, 5vw, 56px);
+  align-items: start;
+}
+@media (min-width: 1080px) {
+  .art-grid { grid-template-columns: minmax(0, 1fr) 218px; }
+  .toc { position: sticky; top: 104px; order: 2; }
+}
+
+.toc {
+  padding: 20px 18px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.toc h2 {
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  letter-spacing: .09em; text-transform: uppercase;
+  color: var(--text-dim); margin: 0 0 12px;
+}
+.toc ol { display: flex; flex-direction: column; gap: 2px; counter-reset: toc; }
+.toc a {
+  display: block; padding: 6px 10px; border-radius: 8px;
+  font-size: 13.2px; line-height: 1.4; color: var(--text-dim);
+  transition: color .2s, background .2s;
+}
+.toc a:hover { color: var(--text); background: var(--surface-hover); }
+.toc a.active { color: var(--text); background: var(--accent-soft); }
+
+/* ─── prose ─── */
+
+.prose { max-width: 70ch; }
+/* Spacing sits on each element rather than on a `> * + *` owl: `.prose p` is
+   more specific than the owl selector and would silently win against it. */
+.prose p { margin: 0 0 1.15em; color: var(--text-soft); font-size: 16.6px; line-height: 1.78; }
+.prose > :last-child { margin-bottom: 0; }
+.prose strong { color: var(--text); font-weight: 600; }
+.prose em { color: var(--text); font-style: italic; }
+
+.prose h2 {
+  font-size: clamp(1.32rem, 3vw, 1.72rem);
+  margin: 2.3em 0 .75em; scroll-margin-top: 96px;
+  display: flex; align-items: baseline; gap: 14px;
+}
+.prose h2 .n {
+  font-family: var(--mono); font-size: 12.5px; font-weight: 600;
+  color: var(--accent); letter-spacing: .04em;
+  flex: none; padding-top: .25em;
+}
+.prose h3 {
+  font-size: 1.06rem; font-weight: 650; color: var(--text);
+  margin: 2.1em 0 .65em; scroll-margin-top: 96px;
+}
+
+.prose ul { display: flex; flex-direction: column; gap: 9px; margin: 0 0 1.3em; }
+.prose ul li {
+  position: relative; padding-left: 20px;
+  color: var(--text-soft); font-size: 16.2px; line-height: 1.7;
+}
+.prose ul li::before {
+  content: ''; position: absolute; left: 2px; top: .62em;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+}
+
+.prose .lead { font-size: 17.4px; color: var(--text); }
+
+/* pull quote */
+.pull {
+  margin: 2.2em 0; padding: 4px 0 4px 22px;
+  border-left: 2px solid var(--accent);
+  font-size: clamp(1.08rem, 2.4vw, 1.3rem);
+  line-height: 1.5; letter-spacing: -.015em;
+  color: var(--text); font-weight: 600;
+}
+
+/* summary / callout cards */
+.tldr {
+  margin: 2em 0 2.4em;
+  padding: 24px 24px 20px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.tldr h2 {
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  letter-spacing: .09em; text-transform: uppercase;
+  color: var(--accent); margin: 0 0 14px; display: block;
+}
+.tldr ul { margin: 0; }
+.tldr ul li { font-size: 15.2px; }
+
+.callout {
+  margin: 2em 0;
+  padding: 20px 22px; border-radius: var(--radius);
+  background: var(--accent-soft); border: 1px solid var(--accent-ring);
+}
+.callout p { color: var(--text); font-size: 15.4px; margin: 0; }
+.callout p + p { margin-top: .8em; }
+.callout .label {
+  display: block; font-family: var(--mono); font-size: 10.5px; font-weight: 600;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
+}
+
+/* ─── figures ─── */
+
+.fig { margin: 2.4em 0; }
+.fig-box {
+  padding: 26px 24px; border-radius: var(--radius-lg);
+  background: var(--surface); border: 1px solid var(--border);
+}
+.fig figcaption {
+  margin-top: 12px; font-size: 13.2px; color: var(--text-dim); line-height: 1.6;
+}
+
+.idx-row + .idx-row { margin-top: 24px; }
+.idx-label {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--text-dim); margin-bottom: 9px;
+}
+.idx-bar { display: flex; gap: 3px; height: 42px; }
+.idx-bar .seg {
+  flex: 1; border-radius: 4px;
+  background: var(--surface-hover); border: 1px solid var(--border);
+}
+.idx-bar .seg.hot { background: var(--accent); border-color: var(--accent); }
+.idx-bar .one {
+  flex: 1; border-radius: 6px; display: grid; place-items: center;
+  background: var(--accent); border: 1px solid var(--accent);
+  color: #fff; font-family: var(--mono); font-size: 11.5px; letter-spacing: .04em;
+}
+.idx-note { margin-top: 9px; font-size: 12.8px; color: var(--text-dim); }
+.idx-note b { color: var(--text); font-weight: 600; }
+
+.gap-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 720px) { .gap-grid { grid-template-columns: 1fr 1fr; } }
+.gap-panel {
+  padding: 18px 18px 16px; border-radius: var(--radius);
+  background: var(--bg-elev); border: 1px solid var(--border);
+}
+.gap-panel h4 {
+  margin: 0 0 12px; font-family: var(--mono); font-size: 10.5px; font-weight: 600;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--text-dim);
+}
+.gap-line { font-family: var(--mono); font-size: 13px; line-height: 1.9; color: var(--text-soft); }
+.gap-line .trunc { color: var(--accent-warm); font-weight: 600; }
+.gap-list { display: flex; flex-direction: column; gap: 5px; }
+.gap-list span { font-family: var(--mono); font-size: 12.4px; color: var(--text-soft); }
+.gap-list span.hit {
+  color: var(--text); background: var(--accent-soft);
+  border: 1px solid var(--accent-ring); border-radius: 6px;
+  padding: 2px 8px; margin-left: -8px; align-self: flex-start;
+}
+
+/* ─── article footer ─── */
+
+.art-foot {
+  margin-top: clamp(48px, 7vw, 76px); padding-top: 34px;
+  border-top: 1px solid var(--border); max-width: 70ch;
+}
+.art-foot h2 { font-size: 1.2rem; margin-bottom: 10px; }
+.art-foot p { color: var(--text-soft); font-size: 15.4px; margin-bottom: 20px; }
+.art-foot .btns { display: flex; flex-wrap: wrap; gap: 12px; }
+
+@media (max-width: 760px) {
+  .prose h2 { gap: 10px; }
+  .prose p { font-size: 16px; }
+}
+
+@media print {
+  .toc, .art-back, .art-foot .btns { display: none !important; }
+  .art-grid { grid-template-columns: 1fr; }
+  .prose { max-width: none; }
+  .fig, .prose h2, .prose h3 { break-inside: avoid; }
+}
+
+/* card → case-study link */
+.card-cta {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin-top: 16px; align-self: flex-start;
+  font-size: 13.2px; font-weight: 600; color: var(--accent);
+  transition: gap .25s var(--ease), opacity .2s;
+}
+.card-cta svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
+.card-cta:hover { gap: 11px; opacity: .82; }

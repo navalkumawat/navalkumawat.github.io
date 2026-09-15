@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Searching two billion court records — Naval Kishor Kumawat</title>
+<meta name="description" content="A case study on free-text search over ~2 billion court-record blobs in Elasticsearch: time-bucketed indices, parallel backfills, and finding the cases the causelists never named." />
+<meta name="author" content="Naval Kishor Kumawat" />
+<meta name="theme-color" content="#08090d" />
+<link rel="canonical" href="https://navalkumawat.github.io/writing/searching-two-billion-court-records.html" />
+
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Searching two billion court records, and the ones that weren't there" />
+<meta property="og:description" content="Time-bucketed Elasticsearch indices made the search fast. The harder problem was the cases the causelists never named." />
+<meta property="og:url" content="https://navalkumawat.github.io/writing/searching-two-billion-court-records.html" />
+<meta property="og:image" content="https://navalkumawat.github.io/assets/img/og-court-search.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Searching two billion court records, and the ones that weren't there" />
+<meta name="twitter:description" content="Time-bucketed Elasticsearch indices made the search fast. The harder problem was the cases the causelists never named." />
+<meta name="twitter:image" content="https://navalkumawat.github.io/assets/img/og-court-search.png" />
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%230a0b0f'/%3E%3Cpath d='M30 72V28h9l22 30V28h9v44h-9L39 42v30z' fill='%237c5cff'/%3E%3C/svg%3E" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+<link rel="stylesheet" href="/assets/css/styles.css" />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Searching two billion court records, and the ones that weren't there",
+  "description": "A case study on free-text search over roughly two billion court-record blobs in Elasticsearch — time-bucketed indices, parallel backfills, and recovering parties the causelists never named.",
+  "datePublished": "2026-09-15",
+  "author": {
+    "@type": "Person",
+    "name": "Naval Kishor Kumawat",
+    "url": "https://navalkumawat.github.io/"
+  },
+  "mainEntityOfPage": "https://navalkumawat.github.io/writing/searching-two-billion-court-records.html",
+  "image": "https://navalkumawat.github.io/assets/img/og-court-search.png",
+  "keywords": ["Elasticsearch", "distributed search", "time-based indices", "legal tech", "data pipelines"]
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<div class="bg-canvas" aria-hidden="true">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="grid-lines"></div>
+</div>
+
+<header class="nav" id="nav">
+  <div class="nav-inner">
+    <a class="brand" href="/" aria-label="Naval Kishor Kumawat — home">
+      <span class="brand-mark" aria-hidden="true">N</span>
+      <span class="brand-text">naval<span class="dim">.dev</span></span>
+    </a>
+
+    <nav class="nav-links" id="navLinks" aria-label="Site navigation">
+      <a href="/#about">About</a>
+      <a href="/#experience">Experience</a>
+      <a href="/#work">Work</a>
+      <a href="/#skills">Skills</a>
+      <a href="/#contact">Contact</a>
+    </nav>
+
+    <div class="nav-actions">
+      <button class="icon-btn" id="themeToggle" type="button" aria-label="Switch to light theme" title="Toggle theme">
+        <svg class="ico-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+        <svg class="ico-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.6M12 19.4V22M2 12h2.6M19.4 12H22M4.9 4.9l1.9 1.9M17.2 17.2l1.9 1.9M19.1 4.9l-1.9 1.9M6.8 17.2l-1.9 1.9"/></svg>
+      </button>
+      <button class="icon-btn menu-btn" id="menuToggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks">
+        <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+      </button>
+    </div>
+  </div>
+  <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+</header>
+
+<main id="main">
+
+  <!-- ══════════════ ARTICLE HEAD ══════════════ -->
+  <header class="art-head">
+    <div class="wrap">
+      <a class="art-back" href="/#work">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+        Selected work
+      </a>
+
+      <p class="eyebrow reveal"><span class="pulse" aria-hidden="true"></span>Case study</p>
+
+      <h1 class="art-title reveal" data-delay="1">
+        Searching two billion court records, and <span class="grad">the ones that weren't there</span>
+      </h1>
+
+      <p class="art-dek reveal" data-delay="2">
+        Making the search fast was an indexing problem. Making it <em>correct</em> was not —
+        the records our users needed most were the ones the courts had never written down.
+      </p>
+
+      <p class="art-meta reveal" data-delay="3">
+        <span>Elasticsearch</span><span class="sep">·</span>
+        <span>Python</span><span class="sep">·</span>
+        <span>Legal-tech, India</span><span class="sep">·</span>
+        <span class="dim">8 min read</span>
+      </p>
+    </div>
+  </header>
+
+  <!-- ══════════════ ARTICLE BODY ══════════════ -->
+  <div class="art-body">
+    <div class="wrap art-grid">
+
+      <aside class="toc" aria-label="Contents">
+        <h2>Contents</h2>
+        <ol>
+          <li><a href="#corpus">What we were searching</a></li>
+          <li><a href="#speed">The first search is the expensive one</a></li>
+          <li><a href="#omission">The documents that lied by omission</a></li>
+          <li><a href="#again">The thing I would look at again</a></li>
+        </ol>
+      </aside>
+
+      <article class="prose">
+
+        <p class="lead">Every working day, courts across India publish a <strong>causelist</strong>: the set
+        of matters that will be heard in front of a particular bench, on a particular day. Every court
+        publishes its own. Some publish clean HTML. Some publish a PDF that is really a scan of a table.
+        Some publish for tomorrow, some for the next three weeks, some whenever they feel like it.</p>
+
+        <p>We were fetching all of them, on a schedule, and turning them into something a lawyer could
+        subscribe to. If your matter was listed, you got told. If a keyword you cared about showed up
+        anywhere in the country, you got told.</p>
+
+        <p>Two parts of that turned out to be much harder than they looked. The first was making the
+        initial search fast. The second was finding cases that the causelists did not actually mention.</p>
+
+        <div class="tldr">
+          <h2>The short version</h2>
+          <ul>
+            <li>~2 billion text blobs, one per parsed matter, in Elasticsearch — deliberately flat text,
+              because every attempt at a strict schema broke on some registry's formatting.</li>
+            <li>The expensive query was not the recurring alert. It was the <strong>first</strong> one:
+              a new subscription backfilling its entire history while the user waits.</li>
+            <li>Time-bucketed indices turned "search two billion" into "search the handful of buckets
+              that overlap the date range", and the slices then ran in parallel.</li>
+            <li>None of that fixed recall. Causelists truncate multi-party matters to
+              <em>&amp; ORS</em>, so the party our user was paying us to find was never in the document.</li>
+            <li>The fix was to detect the truncation marker and go fetch the full party list from the
+              court's per-case page — a second blob indexed beside the first.</li>
+          </ul>
+        </div>
+
+        <h2 id="corpus"><span class="n">01</span> What we were searching</h2>
+
+        <p>For every matter we parsed, we stored a blob: a flat piece of text holding everything we had
+        extracted for that case. Party names, advocates, the case type, number and year. Mongo held the
+        blobs as the source of truth, and they were synced into Elasticsearch almost immediately after
+        being written.</p>
+
+        <p>A blob rather than a neat schema, because we were matching arbitrary user keywords against
+        text whose shape changed from court to court. Every time we tried to force the parsed output into
+        structured fields, some registry's formatting convention broke the assumption. Flat searchable
+        text was the thing that held up.</p>
+
+        <p>Across every court and every day we had been collecting, that came to roughly two billion blobs.</p>
+
+        <h2 id="speed"><span class="n">02</span> The first search is the expensive one</h2>
+
+        <p>The alerting query is small. It runs every twenty to thirty minutes, looks back over the last
+        forty-five, and only ever touches matters that arrived in that window. It is a narrow query over a
+        tiny slice of recent data, and it is not the problem.</p>
+
+        <p>The problem is what happens the moment a user subscribes.</p>
+
+        <p>When a bank adds a keyword, they do not only want to know about matters listed tomorrow. They
+        want the history. Everything we have ever indexed that matches. That single action kicks off a
+        search across the entire corpus — not a window, not a slice, all two billion blobs — and the user
+        is sitting there waiting for it.</p>
+
+        <p class="pull">The first run of every subscription was the worst query in the system, and it
+        happened at the worst possible moment: the first thirty seconds someone spends with the product.</p>
+
+        <h3>Not every mention is the same mention</h3>
+
+        <p>The first thing we did was stop treating the blob as one undifferentiated lump.</p>
+
+        <p>If a bank subscribes to its own name, that name can appear in a matter in several different
+        roles. They might have filed the case. The case might have been filed against them. Or they might
+        just be referenced somewhere in the text of a matter that has nothing to do with them directly.</p>
+
+        <p>Those are three quite different pieces of news, and in-house legal teams usually care most
+        about the second one. So alongside the blob, we extracted and stored the petitioner and respondent
+        names as their own fields on the Elasticsearch document.</p>
+
+        <p>That let a subscription be more specific than a keyword. Track everything mentioning us. Or
+        track only matters where we are the respondent. A search that had been one query over one text
+        field became a combined query: match the term in the petitioner field, or the respondent field, or
+        the body of the blob, depending on what the user had actually asked for.</p>
+
+        <p>It also helped performance, because a query restricted to party fields is matching against far
+        less text than one scanning the full blob.</p>
+
+        <h3>Time is the only thing every court agrees on</h3>
+
+        <p>The real win came from how we laid the data out.</p>
+
+        <p>Court records have a property that makes them easier than they first appear: they are naturally
+        ordered in time, and almost every query against them is bounded in time. A causelist belongs to a
+        date. An alert cares about the last hour. Even a historical backfill usually has a sensible floor —
+        nobody is looking for keyword matches from fifteen years ago on a subscription they created this
+        morning.</p>
+
+        <p>So instead of one enormous index, we wrote blobs into time-bucketed indices, split by day and
+        by month. A query with a date range no longer had to consider the whole corpus. It only had to
+        touch the indices whose buckets overlapped that range, and Elasticsearch could skip everything else
+        without reading it.</p>
+
+        <figure class="fig">
+          <div class="fig-box">
+            <div class="idx-row">
+              <p class="idx-label">One index</p>
+              <div class="idx-bar"><span class="one">~2,000,000,000 blobs considered</span></div>
+              <p class="idx-note">Every query pays for the whole corpus, whatever date range it asked for.</p>
+            </div>
+            <div class="idx-row">
+              <p class="idx-label">Bucketed by time</p>
+              <div class="idx-bar">
+                <span class="seg"></span><span class="seg"></span><span class="seg"></span>
+                <span class="seg"></span><span class="seg"></span><span class="seg"></span>
+                <span class="seg"></span><span class="seg"></span><span class="seg"></span>
+                <span class="seg hot"></span><span class="seg hot"></span><span class="seg hot"></span>
+              </div>
+              <p class="idx-note"><b>Three buckets read.</b> The rest are pruned by the date range before
+              a single document is scored.</p>
+            </div>
+          </div>
+          <figcaption>Two billion is only two billion if you insist on looking at all of it.</figcaption>
+        </figure>
+
+        <p>This is what turned the number from two billion into something manageable. In practice, a
+        search bounded to the last two years is a search over a defined, countable set of small indices,
+        and the ones outside that range cost nothing.</p>
+
+        <p>It also meant the incremental alerting query — the one that runs every twenty minutes, forever —
+        only ever touched the newest index. The hot path stopped competing with the cold data entirely.</p>
+
+        <h3>Running the slices in parallel</h3>
+
+        <p>Once the data was partitioned by time, the backfill stopped being one large query and became
+        many small independent ones. Each time slice could be searched on its own, and none of them
+        depended on the results of any other.</p>
+
+        <p>So we ran them in parallel and merged the results, rather than issuing one query and waiting for
+        the cluster to grind through everything sequentially. The user's wait time went from the sum of all
+        the slices to roughly the slowest one.</p>
+
+        <div class="callout">
+          <span class="label">The trade-off</span>
+          <p>Finer time buckets prune better, but more indices means more shards, and shard count is not
+          free — the cluster pays for every one of them in memory and coordination overhead. Daily
+          granularity for recent data and coarser buckets for older data was the compromise we landed on,
+          because recent data is what gets queried with precision and old data mostly gets swept in bulk.</p>
+        </div>
+
+        <h2 id="omission"><span class="n">03</span> The documents that lied by omission</h2>
+
+        <p>The search worked. And it still missed cases.</p>
+
+        <p>Here is why. Indian causelists are written for people standing in a courtroom, not for machines.
+        When a matter has multiple parties on one side, the list does not print all of them. It prints the
+        first one and then an abbreviation — <em>&amp; ANR</em>, <em>&amp; ORS</em>, or some local variant —
+        meaning "and another" or "and others."</p>
+
+        <p>So a matter with a bank as the fourth respondent appears in the causelist as
+        <em>Sharma vs State &amp; Ors</em>. The bank's name is simply not in the document.</p>
+
+        <figure class="fig">
+          <div class="fig-box gap-grid">
+            <div class="gap-panel">
+              <h4>What the causelist prints</h4>
+              <p class="gap-line">Sharma <span class="dim">vs</span> State <span class="trunc">&amp; Ors</span></p>
+              <p class="idx-note">Keyword search for the bank: <b>no match.</b></p>
+            </div>
+            <div class="gap-panel">
+              <h4>Who is actually on the matter</h4>
+              <div class="gap-list">
+                <span>1 · State of Rajasthan</span>
+                <span>2 · Municipal Corporation</span>
+                <span>3 · R. Mehta</span>
+                <span class="hit">4 · the bank we alert for</span>
+              </div>
+            </div>
+          </div>
+          <figcaption>The court's own formatting convention had deleted the thing our users were paying us to find.</figcaption>
+        </figure>
+
+        <p>No amount of tuning fixes this. Better relevance, better analyzers, better tokenization, a
+        bigger cluster — none of it matters, because the string you are searching for was never written
+        down.</p>
+
+        <p>And these are not edge cases. Multi-party matters are extremely common, and the consequence of
+        missing one is not a slightly worse search result. It is a client not knowing they are listed.</p>
+
+        <h3>Detecting an absence</h3>
+
+        <p>What we could detect was the marker itself. If a parsed matter contained one of those truncation
+        tokens, we knew two things: that the party list was incomplete, and — because we had already
+        extracted the case type, number and year — exactly which case it was.</p>
+
+        <p>Most courts expose a per-case detail page that lists every party properly. So for any matter
+        flagged as truncated, we went and fetched it.</p>
+
+        <p>The parties from that page became a second, supplementary blob, stored against the same case and
+        indexed alongside the original. The causelist blob recorded what was listed; the supplementary blob
+        recorded who was actually involved. A keyword search hitting either one was a match.</p>
+
+        <p>That closed the gap. A bank buried four names deep in a respondent list now surfaced, even
+        though the causelist that triggered the alert never named them.</p>
+
+        <h3>What it cost</h3>
+
+        <p>It is not free. Every truncated matter becomes an extra fetch against a court website that is
+        usually slow, frequently unavailable, and generally not built with our traffic in mind. On a heavy
+        listing day that is a lot of additional requests, and they queue behind the same bot detection and
+        scheduling constraints as everything else.</p>
+
+        <p class="pull">A false positive is mild annoyance. A false negative is a client missing a hearing.
+        When the cost of the two errors is that lopsided, you spend on recall and you stop agonising over it.</p>
+
+        <h2 id="again"><span class="n">04</span> The thing I would look at again</h2>
+
+        <p>The alerting design is where I would start.</p>
+
+        <p>We polled. Every twenty to thirty minutes, look back over the last forty-five, find new matters,
+        check them against the subscription list, send what matched. The window deliberately overlapped the
+        interval so that nothing could slip through a boundary, and deduplication handled the repeats.
+        At-least-once, with a cheap fix for the duplicates, rather than trying to build exactly-once and
+        getting it subtly wrong.</p>
+
+        <p>That is sound, but it is search running backwards. Normal search is one query against many
+        documents. Alerting is many standing queries against each arriving document, and Elasticsearch has
+        a feature built for exactly that shape — the percolator, which stores the queries and matches
+        documents against them as they land.</p>
+
+        <p>Whether it would have held up at our subscription count, I genuinely do not know. Every
+        percolator query lives in memory, and "thousands of keyword subscriptions" is a different scale of
+        problem from the examples in the documentation. But we never seriously evaluated it, and the reason
+        we never evaluated it was that polling already worked. That is a reasonable engineering answer and
+        also the way systems quietly ossify.</p>
+
+        <p>If I built this again, I would at least find out.</p>
+
+        <div class="art-foot">
+          <h2>Built something with a similar shape?</h2>
+          <p>I spend most of my time on systems like this one — search, ingestion pipelines and the
+          real-time products sitting on top of them. If that is the sort of problem on your desk, I would
+          like to hear about it.</p>
+          <div class="btns">
+            <a class="btn btn-primary" href="/#contact">
+              Get in touch
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </a>
+            <a class="btn btn-ghost" href="/#work">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+              More work
+            </a>
+          </div>
+        </div>
+
+      </article>
+
+    </div>
+  </div>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <p class="mono dim">© <span id="year">2026</span> Naval Kishor Kumawat</p>
+    <p class="mono dim">Built from scratch · Hosted on GitHub Pages</p>
+  </div>
+</footer>
+
+<script src="/assets/js/main.js" defer></script>
+<script>
+/* Contents rail: highlight whichever section is currently in view.
+   Progressive enhancement — the links work fine without this. */
+(function () {
+  var links = document.querySelectorAll('.toc a');
+  if (!links.length) return;
+
+  var items = [];
+  Array.prototype.forEach.call(links, function (a) {
+    var el = document.getElementById(a.getAttribute('href').slice(1));
+    if (el) items.push({ link: a, el: el });
+  });
+
+  var ticking = false;
+
+  function sync() {
+    var probe = window.innerHeight * 0.32;
+    var active = items.length ? items[0].link : null;
+    items.forEach(function (i) {
+      if (i.el.getBoundingClientRect().top <= probe) active = i.link;
+    });
+    items.forEach(function (i) { i.link.classList.toggle('active', i.link === active); });
+    ticking = false;
+  }
+
+  window.addEventListener('scroll', function () {
+    if (!ticking) { ticking = true; requestAnimationFrame(sync); }
+  }, { passive: true });
+  window.addEventListener('resize', sync, { passive: true });
+  sync();
+})();
+</script>
+</body>
+</html>

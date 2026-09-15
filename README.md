@@ -13,9 +13,11 @@ Three files do all the work:
 
 ```
 index.html                         markup + content + SEO/JSON-LD
-assets/css/styles.css              design tokens, layout, components, responsive, print
+writing/*.html                     long-form case studies (own <head>, shared CSS/JS)
+assets/css/styles.css              design tokens, layout, components, article, responsive, print
 assets/js/main.js                  theme toggle, scroll reveal, counters, nav, mobile menu
 assets/img/og.png                  social share card (1200×630)
+assets/img/og-court-search.png     share card for the court-records case study
 assets/Naval-Kishor-Kumawat-Resume.pdf
 404.html  robots.txt  sitemap.xml  .nojekyll
 ```
@@ -118,6 +120,7 @@ Common edits:
 | Add a job | copy an `<li class="job">` block in the `EXPERIENCE` section |
 | Add a project | copy an `<article class="card">` block in the `WORK` section |
 | Update the résumé PDF | replace `assets/Naval-Kishor-Kumawat-Resume.pdf`, same filename |
+| Add a case study | see *Writing* below |
 | Change years of experience | it is computed automatically from `CAREER_START` in `assets/js/main.js` |
 
 Preview locally by opening `index.html` in a browser, or:
@@ -133,6 +136,32 @@ git add -A && git commit -m "Update experience section" && git push
 ```
 
 Pages redeploys automatically.
+
+---
+
+## Writing
+
+Long-form pieces live in `writing/` as standalone HTML files that reuse the same
+stylesheet and `main.js`. To add one:
+
+1. Copy `writing/searching-two-billion-court-records.html` to a new filename.
+2. Replace the `<head>` (title, description, canonical, OG/Twitter URLs, JSON-LD) and
+   the article body. Paths to `/assets/...` are absolute, so they work from any depth.
+3. Structure available inside `.prose`: `h2` with a `<span class="n">01</span>` number,
+   `h3`, `p` (add `class="lead"` for the opener), `ul`, `.tldr` summary card,
+   `.callout` for an aside, `.pull` for a pull quote, `figure.fig > .fig-box` for a
+   diagram, and `.art-foot` for the closing CTA.
+4. List the sections in the `.toc` rail — the inline script at the bottom of the page
+   highlights whichever one is in view.
+5. Link to it from the relevant card in the `WORK` section of `index.html` with
+   `<a class="card-cta">`, and add the URL to `sitemap.xml`.
+
+Do **not** put `class="reveal"` on the article body. The reveal observer needs 12% of an
+element in view, which a very tall article never reaches on a phone, so the text would
+stay invisible.
+
+Share card: render a 1200×630 page with headless Chrome — see *Regenerating the social
+card* at the end of this file.
 
 ---
 
