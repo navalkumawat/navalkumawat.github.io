@@ -32,6 +32,12 @@
   --radius: 16px;
   --radius-lg: 22px;
 
+  /* fallbacks for the nav surfaces: color-mix() and backdrop-filter are both
+     comparatively recent, and without a background the bar lets the page
+     scroll through it */
+  --bg-veil:  rgba(8, 9, 13, .9);
+  --bg-sheet: rgba(8, 9, 13, .97);
+
   --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 32px -12px rgba(0,0,0,.55);
   --ease: cubic-bezier(.22, 1, .36, 1);
 }
@@ -55,6 +61,8 @@ html[data-theme='light'] {
   --accent-ring:   rgba(91, 61, 240, 0.28);
 
   --grad: linear-gradient(110deg, #6d4bf5 0%, #5b3df0 40%, #008fc4 100%);
+  --bg-veil:  rgba(251, 251, 253, .9);
+  --bg-sheet: rgba(251, 251, 253, .97);
   --shadow: 0 1px 2px rgba(20,22,29,.05), 0 14px 34px -16px rgba(20,22,29,.22);
 }
 
@@ -161,6 +169,7 @@ html[data-theme='light'] .orb { opacity: .22; filter: blur(80px); }
   border-bottom: 1px solid transparent;
 }
 .nav.stuck {
+  background: var(--bg-veil);
   background: color-mix(in srgb, var(--bg) 82%, transparent);
   backdrop-filter: saturate(160%) blur(14px);
   -webkit-backdrop-filter: saturate(160%) blur(14px);
@@ -212,7 +221,9 @@ html[data-theme='light'] .orb { opacity: .22; filter: blur(80px); }
 html[data-theme='light'] .ico-sun  { display: block; }
 html[data-theme='light'] .ico-moon { display: none; }
 
-.menu-btn { display: none; flex-direction: column; gap: 4px; }
+/* .icon-btn centres its contents with grid place-items; switching this one to
+   flex for the bar stack loses that, so centre it explicitly */
+.menu-btn { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
 .menu-btn .bar {
   width: 16px; height: 1.8px; border-radius: 2px; background: currentColor;
   transition: transform .25s var(--ease), opacity .2s;
@@ -225,6 +236,11 @@ html[data-theme='light'] .ico-moon { display: none; }
   height: 2px; width: 0;
   background: var(--grad);
   transition: width .08s linear;
+}
+
+@supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
+  .nav.stuck  { background: var(--bg-sheet); }
+  .nav-links  { background: var(--bg-sheet); }
 }
 
 /* ─────────── hero ─────────── */
@@ -403,6 +419,17 @@ html[data-theme='light'] .ico-moon { display: none; }
   padding: 26px;
   box-shadow: var(--shadow);
 }
+/* portrait sits at the top of the card; 4:3 is the source ratio, so nothing
+   is cropped and the flat blue backdrop lines up with the accent ring */
+.portrait {
+  margin: 0 0 20px;
+  aspect-ratio: 4 / 3;
+  border-radius: 14px; overflow: hidden;
+  border: 1px solid var(--accent-ring);
+  background: var(--accent-soft);
+}
+.portrait img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
 .card-title { color: var(--accent); margin: 0 0 18px; font-weight: 600; }
 .facts > div {
   display: grid; grid-template-columns: 82px 1fr; gap: 12px;
@@ -632,6 +659,7 @@ html[data-theme='light'] .ico-moon { display: none; }
     position: absolute; top: calc(100% + 1px); left: 0; right: 0;
     flex-direction: column; align-items: stretch; gap: 2px;
     padding: 10px var(--gutter) 18px;
+    background: var(--bg-sheet);
     background: color-mix(in srgb, var(--bg) 96%, transparent);
     backdrop-filter: saturate(160%) blur(14px);
     -webkit-backdrop-filter: saturate(160%) blur(14px);
